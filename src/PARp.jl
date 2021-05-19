@@ -113,6 +113,13 @@ function select_best_model(candidate_models::Vector, information_criteria::Strin
         candidate_aicc = map(aic, candidate_models)
         _, best_model_idx = findmin(candidate_aicc)
         return candidate_models[best_model_idx]
+    elseif information_criteria == "fixed_at_p_lim"
+        # TODO 
+        # When the information criteria is to choose a fixed p for everybody 
+        # the best model is always the one of order p_lim.
+        # This implementation is very naive and can be optimzed (bu not fitting all models
+        # from 1 to p_lim)
+        return candidate_models[end]
     end
     return error()
 end

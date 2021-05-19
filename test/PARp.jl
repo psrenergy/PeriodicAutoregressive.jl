@@ -2,7 +2,7 @@
     n_stages = 12
     p_lim = 6
     par_1 = PARp(funil_grande, n_stages, p_lim; information_criteria = "aic");
-    par_2 = PARp(batalha, n_stages, p_lim; information_criteria = "aic");
+    par_2 = PARp(batalha, n_stages, p_lim; information_criteria = "aicc");
     fit_par!(par_1);
     fit_par!(par_2);
 
@@ -18,4 +18,20 @@
     # TODO test something about the simulations
     scen = simulate_par(par_1, 10, 100)
     scen = simulate_par([par_1; par_2], 100, 1000)
+
+    p_lim = 3
+    par_1_fixed_p = PARp(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim");
+    fit_par!(par_1_fixed_p);
+    @test par_1_fixed_p.best_AR_stage[1].p == 3
+    @test par_1_fixed_p.best_AR_stage[2].p == 3
+    @test par_1_fixed_p.best_AR_stage[3].p == 3
+    @test par_1_fixed_p.best_AR_stage[4].p == 3
+    @test par_1_fixed_p.best_AR_stage[5].p == 3
+    @test par_1_fixed_p.best_AR_stage[6].p == 3
+    @test par_1_fixed_p.best_AR_stage[7].p == 3
+    @test par_1_fixed_p.best_AR_stage[8].p == 3
+    @test par_1_fixed_p.best_AR_stage[9].p == 3
+    @test par_1_fixed_p.best_AR_stage[10].p == 3
+    @test par_1_fixed_p.best_AR_stage[11].p == 3
+    @test par_1_fixed_p.best_AR_stage[12].p == 3
 end
