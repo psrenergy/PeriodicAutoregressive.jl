@@ -10,5 +10,6 @@ export PARp
 
 include("utils.jl")
 include("PARp.jl")
+include("PARpA.jl")
 
 end # module

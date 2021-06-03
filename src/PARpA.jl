@@ -1,4 +1,4 @@
-mutable struct AR
+mutable struct AR_A
     y::Vector{Float64}
     p::Int
     ϕ::Vector{Float64}
@@ -6,7 +6,7 @@ mutable struct AR
     aicc::Float64
     var_resid::Float64
     resid::Vector{Float64}
-    function AR(y::Vector{Float64}, p::Int)
+    function AR_A(y::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
         return new(y,
             p,
@@ -19,36 +19,39 @@ mutable struct AR
     end
 end
 
-aic(ar::AR) = ar.aic
-aicc(ar::AR) = ar.aicc
-coef(ar::AR) = ar.ϕ
-residuals(ar::AR) = ar.resid
-residuals_variance(ar::AR) = ar.var_resid
+aic(ar::AR_A) = ar.aic
+aicc(ar::AR_A) = ar.aicc
+coef(ar::AR_A) = ar.ϕ
+residuals(ar::AR_A) = ar.resid
+residuals_variance(ar::AR_A) = ar.var_resid
 
-mutable struct PARp
+mutable struct PARpA
     y::Vector{Float64}
     y_normalized::Vector{Float64}
     μ_stage::Vector{Float64}
     σ_stage::Vector{Float64}
-    candidate_AR_stage::Vector{Vector{AR}}
-    best_AR_stage::Vector{AR}
+    anual_y::Vector{Float64}
+    μ_anual::Vector{Float64}
+    σ_anual::Vector{Float64}
+    candidate_AR_A_stage::Vector{Vector{AR_A}}
+    best_AR_A_stage::Vector{AR_A}
     seasonal::Int
     p_lim::Int
     information_criteria::String
     last_stage::Int
 
-    function PARp(y::Vector{Float64}, seasonal::Int, p_lim::Int; information_criteria::String = "aic")
+    function PARpA(y::Vector{Float64}, seasonal::Int, p_lim::Int; information_criteria::String = "aic")
         assert_series_without_missing(y)
         y_normalized, μ_stage, σ_stage = normalize_series(y, seasonal)
-        candidate_AR_stage = Vector{Vector{AR}}(undef, 0)
-        best_AR_stage = Vector{AR}(undef, 0)
+        candidate_AR_A_stage = Vector{Vector{AR_A}}(undef, 0)
+        best_AR_A_stage = Vector{AR_A}(undef, 0)
         last_stage = mod1(length(y), seasonal)
         return new(y, 
                 y_normalized, 
                 μ_stage, 
                 σ_stage, 
-                candidate_AR_stage,
-                best_AR_stage,
+                candidate_AR_A_stage,
+                best_AR_A_stage,
                 seasonal, 
                 p_lim,
                 information_criteria,
@@ -57,13 +60,13 @@ mutable struct PARp
     end
 end
 
-num_stages(par::PARp) = par.seasonal
-p_limit(par::PARp) = par.p_lim
+num_stages(par::PARpA) = par.seasonal
+p_limit(par::PARpA) = par.p_lim
 
-function residuals_of_best_model_at_stage(par::PARp, stage::Int)
-    return residuals(par.best_AR_stage[stage])
+function residuals_of_best_model_at_stage(par::PARpA, stage::Int)
+    return residuals(par.best_AR_A_stage[stage])
 end
-function residuals_of_best_models_at_stage(par_models::Vector{PARp}, current_stage_to_predict::Int)
+function residuals_of_best_models_at_stage(par_models::Vector{PARpA}, current_stage_to_predict::Int)
     residuals = Vector{Vector{Float64}}(undef, 0)
     for pm in par_models
         push!(residuals, residuals_of_best_model_at_stage(pm, current_stage_to_predict))
