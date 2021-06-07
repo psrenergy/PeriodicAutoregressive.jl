@@ -104,26 +104,6 @@ function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
     return ar
 end
 
-function select_best_model(candidate_models::Vector, information_criteria::String)
-    if information_criteria == "aic"
-        candidate_aic = map(aic, candidate_models)
-        _, best_model_idx = findmin(candidate_aic)
-        return candidate_models[best_model_idx]
-    elseif information_criteria == "aicc"
-        candidate_aicc = map(aic, candidate_models)
-        _, best_model_idx = findmin(candidate_aicc)
-        return candidate_models[best_model_idx]
-    elseif information_criteria == "fixed_at_p_lim"
-        # TODO 
-        # When the information criteria is to choose a fixed p for everybody 
-        # the best model is always the one of order p_lim.
-        # This implementation is very naive and can be optimzed (bu not fitting all models
-        # from 1 to p_lim)
-        return candidate_models[end]
-    end
-    return error()
-end
-
 function fit_par!(par::PARp)
     # fit all AR models
     for stage in 1:num_stages(par)
@@ -154,10 +134,12 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     n_stages = num_stages(par_models[1])
     p_lim = p_limit(par_models[1])
     n_models = length(par_models)
+    scenarios_normalized = zeros(steps_ahead + p_lim, n_models, n_scenarios)
     scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
+        scenarios_normalized[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
+        scenarios[1:p_lim, i,  :] .= pm.y[end-p_lim+1:end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -170,31 +152,24 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
         for (i, pm) in enumerate(par_models)
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
             for s in 1:n_scenarios
-                # TODO - this part could be cleaner and more efficient
-                # we are calculating a dot product twice inside a big loop
+                # Evaluate the deterministic parts of the scenarios
+                autorregressive_normalized = dot(
+                    scenarios_normalized[t_scen_idx-current_model_p:t_scen_idx-1, i, s],
+                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                )
 
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
                 lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
-                dot(
-                    scenarios[t_scen_idx-current_model_p:t_scen_idx-1, i, s],
-                    pm.best_AR_stage[current_stage_to_predict].ϕ
-                )
+                                            autorregressive_normalized
                 λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
                 μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
                 σ_log_normal = sqrt(log(λ))
                 ruido = exp(ruido_correlacionado[s, i]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
                 # Evaluate the scenario value
-                scenarios[t_scen_idx, i, s] = dot(
-                                            scenarios[t_scen_idx-current_model_p:t_scen_idx-1, i, s],
-                                            pm.best_AR_stage[current_stage_to_predict].ϕ
-                                        ) + ruido
+                scenarios_normalized[t_scen_idx, i, s] = autorregressive_normalized + ruido
+                scenarios[t_scen_idx, i, s] = scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
             end
         end
-    end
-    for t in 1:steps_ahead, (i, pm) in enumerate(par_models)
-        current_stage = mod1(pm.last_stage + t, n_stages)
-        t_scen_idx = t + p_lim
-        scenarios[t_scen_idx, i, :] = scenarios[t_scen_idx, i, :] .* pm.σ_stage[current_stage] .+ pm.μ_stage[current_stage]
     end
     return scenarios[p_lim+1:end, :, :]
 end
