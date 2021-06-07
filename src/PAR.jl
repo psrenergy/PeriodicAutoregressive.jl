@@ -7,6 +7,7 @@ using Statistics
 export fit_par!
 export simulate_par
 export PARp
+export PARpA
 
 include("utils.jl")
 include("PARp.jl")

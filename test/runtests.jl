@@ -8,3 +8,4 @@ include("data/camargos.jl")
 
 include("utils.jl")
 include("PARp.jl")
+include("PARpA.jl")
