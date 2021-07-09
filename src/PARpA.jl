@@ -8,6 +8,9 @@ mutable struct AR_A
     aicc::Float64
     var_resid::Float64
     resid::Vector{Float64}
+    p_values::Vector{Float64}
+    coef_table
+    ols
     function AR_A(y::Vector{Float64}, y_anual::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
         return new(y,
@@ -18,7 +21,10 @@ mutable struct AR_A
             zero(Float64),
             zero(Float64),
             zero(Float64),
-            zeros(Float64, 2)
+            zeros(Float64, 2),
+            zeros(Float64, p),
+            nothing,
+            nothing
         )
     end
 end
@@ -122,7 +128,11 @@ end
 
 function fit_ar!(ar_A::AR_A; stage::Int = 1, par_seasonal::Int = 12)
     y_to_fit, X_to_fit = build_y_X(ar_A.y, ar_A.y_anual, ar_A.p, stage, par_seasonal)
-    params = X_to_fit \ y_to_fit
+    ols = lm(X_to_fit, y_to_fit)
+    ar_A.ols = ols
+    params = coef(ols)
+    ar_A.coef_table = coeftable(ols)
+    ar_A.p_values = ar_A.coef_table.cols[ar_A.coef_table.pvalcol]
     ar_A.ϕ = params[1:end-1]
     ar_A.ϕ_A = params[end]
     ar_A.resid = y_to_fit - X_to_fit * params

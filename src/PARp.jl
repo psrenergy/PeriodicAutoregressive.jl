@@ -6,6 +6,9 @@ mutable struct AR
     aicc::Float64
     var_resid::Float64
     resid::Vector{Float64}
+    p_values::Vector{Float64}
+    coef_table
+    ols
     function AR(y::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
         return new(y,
@@ -14,7 +17,10 @@ mutable struct AR
             zero(Float64),
             zero(Float64),
             zero(Float64),
-            zeros(Float64, 2)
+            zeros(Float64, 2),
+            zeros(Float64, p),
+            nothing,
+            nothing
         )
     end
 end
@@ -92,7 +98,11 @@ end
 
 function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
     y_to_fit, X_to_fit = build_y_X(ar.y, ar.p, stage, par_seasonal)
-    ar.ϕ = X_to_fit \ y_to_fit
+    ols = lm(X_to_fit, y_to_fit)
+    ar.ols = ols
+    ar.ϕ = coef(ols)
+    ar.coef_table = coeftable(ols)
+    ar.p_values = ar.coef_table.cols[ar.coef_table.pvalcol]
     ar.resid = y_to_fit - X_to_fit * ar.ϕ
     ar.var_resid = var(ar.resid)
     n = length(y_to_fit) + ar.p
@@ -173,3 +183,11 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     end
     return scenarios[p_lim+1:end, :, :]
 end
+
+using GLM
+X = rand(100, 3)
+y = rand(100)
+
+ols = lm(X, y)
+coef(ols)
+a = coeftable(ols)
