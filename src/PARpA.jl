@@ -208,7 +208,7 @@ function simulate_par(par_models::Vector{PARpA}, steps_ahead::Int, n_scenarios::
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-current_model_p:t_scen_idx-1, i, s],
+                    scenarios_normalized[t_scen_idx-1 : -1 : t_scen_idx-current_model_p, i, s],
                     pm.best_AR_A_stage[current_stage_to_predict].ϕ
                 )
                 mean_last_12_ena = mean(scenarios[t_scen_idx-n_stages:t_scen_idx-1, i, s])

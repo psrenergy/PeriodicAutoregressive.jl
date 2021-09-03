@@ -164,7 +164,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-current_model_p:t_scen_idx-1, i, s],
+                    scenarios_normalized[t_scen_idx-1 : -1 : t_scen_idx-current_model_p, i, s],
                     pm.best_AR_stage[current_stage_to_predict].ϕ
                 )
 
