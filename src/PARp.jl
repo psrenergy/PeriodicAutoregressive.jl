@@ -183,11 +183,3 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     end
     return scenarios[p_lim+1:end, :, :]
 end
-
-using GLM
-X = rand(100, 3)
-y = rand(100)
-
-ols = lm(X, y)
-coef(ols)
-a = coeftable(ols)
