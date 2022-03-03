@@ -1,7 +1,8 @@
 # PAR.jl
 Repository with Periodic Autorregressive models.
 
-This is an immature repository and should not be considered production-ready. The main goal of the repository is to implement simple variations of Periodic Autorregressive models.
+The main goal of the repository is to implement Periodic Autorregressive (PAR) models and some simple variations of the model.
+The full methodology of PAR models can be found in this article (Maceira, Maria & Penna, Débora & Damazio, Jorge. (2006). Geração de Cenários Sintéticos de Energia e Vazão para o Planejamento da Operação Energética. Cadernos do IME : Série Estatística. 21. 10.12957/cadest.2006.15760.) a link to the article's pdf can be found [here](https://www.e-publicacoes.uerj.br/index.php/cadest/article/download/15760/11931) (Available only in Portuguese.)
 
 To add the package you can do:
 ```julia

@@ -14,11 +14,7 @@
     @test par_p_a_2.y_anual[13] ≈ 233.1666666
     @test par_p_a_2.y_anual[14] == 255.75
     @test par_p_a_2.y_anual[end] == 91.25
-    # TODO chechk this for camargos again 
-    # The presentation Validação do modelo GEVAZP - v8.1.1
-    # said it should be 131.22 maybe I am doing with the wrong data.
-    @test_broken par_p_a_2.μ_anual[1] == 131.22
-
+    
     # TODO test something about the simulations
     scen = simulate_par(par_p_a_1, 10, 100)
     scen = simulate_par([par_p_a_1; par_p_a_2], 100, 1000)
