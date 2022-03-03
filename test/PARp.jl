@@ -34,4 +34,9 @@
     @test par_1_fixed_p.best_AR_stage[10].p == 3
     @test par_1_fixed_p.best_AR_stage[11].p == 3
     @test par_1_fixed_p.best_AR_stage[12].p == 3
+
+     # TODO test something about the simulations
+    scen_b, scen_f = PAR.simulate_par_f_b([par_1], 10, 100, 20)
+    scen_b, scen_f = PAR.simulate_par_f_b([par_1; par_2], 10, 100, 20)
+    scen_b, scen_f = PAR.simulate_par_f_b([par_1; par_2], 10, 100, 20; global_lower_bound = true)
 end

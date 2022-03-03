@@ -183,3 +183,87 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     end
     return scenarios[p_lim+1:end, :, :]
 end
+
+function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int, n_backw::Int; global_lower_bound::Bool = false)
+    assert_same_number_of_stages(par_models)
+    assert_same_p_limit(par_models)
+    n_stages = num_stages(par_models[1])
+    p_lim = p_limit(par_models[1])
+    n_models = length(par_models)
+    scenarios_normalized = zeros(steps_ahead + p_lim, n_models, n_scenarios)
+
+    # TODO: reorder this matrix we are having too many cache misses....
+    scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios, n_backw)
+    # Fill the first part of scenarios with historical data
+    for (i, pm) in enumerate(par_models)
+        scenarios_normalized[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
+        scenarios[1:p_lim, i,  :, :] .= pm.y[end-p_lim+1:end]
+    end
+    # Simulate on the standardized series
+    for t in 1:steps_ahead
+        current_stage_to_predict = mod1(par_models[1].last_stage + t, n_stages)
+        t_scen_idx = t + p_lim
+        MAX = 7.0
+        ruido_normal = clamp.(randn(n_backw, n_models), -MAX, MAX)
+        ruido_correlacionado = ruido_normal
+        # shufle one of the "back" noises generated for this stage
+        # for each of the scenarios (needs to be here to preserve correlation)
+        noise_index_sf = rand(1:n_backw, n_scenarios)
+        for (i, pm) in enumerate(par_models)
+            current_model_p = pm.best_AR_stage[current_stage_to_predict].p
+            psiser = zeros(n_scenarios)
+            for s_f in 1:n_scenarios
+                # Evaluate the deterministic parts of the scenarios
+                autorregressive_normalized = dot(
+                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
+                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                )
+                # Calculate the noise and the parameters of the viable 3 parameter log normal
+                psiser[s_f] = - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
+                                autorregressive_normalized
+            end
+            psimax = maximum(psiser)
+            for s_f in 1:n_scenarios
+                # Evaluate the deterministic parts of the scenarios
+                autorregressive_normalized = dot(
+                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
+                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                )
+                # Calculate the noise and the parameters of the viable 3 parameter log normal
+                lower_bound_log_normal = if global_lower_bound
+                    - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
+                      autorregressive_normalized
+                else
+                    psimax
+                end
+
+                lower_bound_log_normal = min(-0.01, lower_bound_log_normal)
+
+                λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
+                σ_log_normal = sqrt(log(λ))
+                μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
+                ruido = exp(ruido_correlacionado[noise_index_sf[s_f], i] * σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                # Evaluate the scenario value
+                scenarios_normalized[t_scen_idx, i, s_f] = autorregressive_normalized + ruido
+                for s_b in 1:n_backw
+                    _s_b = s_b
+                    if _s_b == 1
+                        _s_b = noise_index_sf[s_f]
+                    elseif _s_b == noise_index_sf[s_f]
+                        _s_b = 1
+                    end
+                    ruido = exp(ruido_correlacionado[_s_b, i] * σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                    scenarios_normalized_back = autorregressive_normalized + ruido
+                    scenarios[t_scen_idx, i, s_f, s_b] =
+                        scenarios_normalized_back * pm.σ_stage[current_stage_to_predict] +
+                            pm.μ_stage[current_stage_to_predict]
+                    if scenarios[t_scen_idx, i, s_f, s_b] <= 0
+                        scenarios[t_scen_idx, i, s_f, s_b] =
+                            pm.σ_stage[current_stage_to_predict] * (0.04 + 0.01 * rand())
+                    end
+                end
+            end
+        end
+    end
+    return scenarios[p_lim+1:end, :, :, :], scenarios[1:p_lim, :,  1, 1]
+end
