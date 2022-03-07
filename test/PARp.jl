@@ -39,4 +39,15 @@
     scen_b, scen_f = PAR.simulate_par_f_b([par_1], 10, 100, 20)
     scen_b, scen_f = PAR.simulate_par_f_b([par_1; par_2], 10, 100, 20)
     scen_b, scen_f = PAR.simulate_par_f_b([par_1; par_2], 10, 100, 20; global_lower_bound = true)
+
+    # Test data with only zeros
+    zero_data = zeros(1200)
+    par_3 = PARp(zero_data, n_stages, p_lim; information_criteria = "aic");
+    fit_par!(par_3)
+    scen = simulate_par([par_3], 10, 12)
+    scen_b, scen_f = PAR.simulate_par_f_b([par_3], 10, 10, 12)
+
+    @test sum(scen) == 0
+    @test sum(scen_b) == 0
+    @test sum(scen_f) == 0
 end

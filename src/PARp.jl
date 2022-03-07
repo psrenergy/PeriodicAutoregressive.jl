@@ -42,9 +42,11 @@ mutable struct PARp
     p_lim::Int
     information_criteria::String
     last_stage::Int
+    series_with_zeros::Bool
 
     function PARp(y::Vector{Float64}, seasonal::Int, p_lim::Int; information_criteria::String = "aic")
         assert_series_without_missing(y)
+        series_with_zeros = series_with_only_zeros(y)
         y_normalized, μ_stage, σ_stage = normalize_series(y, seasonal)
         candidate_AR_stage = Vector{Vector{AR}}(undef, 0)
         best_AR_stage = Vector{AR}(undef, 0)
@@ -58,7 +60,8 @@ mutable struct PARp
                 seasonal, 
                 p_lim,
                 information_criteria,
-                last_stage
+                last_stage,
+                series_with_zeros
             )
     end
 end
@@ -160,6 +163,10 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
         ruido_normal = randn(n_scenarios, n_models) 
         ruido_correlacionado = ruido_normal * cholesky(cor_matrix).L
         for (i, pm) in enumerate(par_models)
+            if pm.series_with_zeros
+                scenarios[t_scen_idx, i, :] .= zero(Float64)
+                continue
+            end
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
@@ -210,6 +217,10 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
         # for each of the scenarios (needs to be here to preserve correlation)
         noise_index_sf = rand(1:n_backw, n_scenarios)
         for (i, pm) in enumerate(par_models)
+            if pm.series_with_zeros
+                scenarios[t_scen_idx, i, :, :] .= zero(Float64)
+                continue
+            end
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
             psiser = zeros(n_scenarios)
             for s_f in 1:n_scenarios

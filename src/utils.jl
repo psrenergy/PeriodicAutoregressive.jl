@@ -5,6 +5,15 @@ function assert_series_without_missing(y::Vector{Float64})
     return true
 end
 
+function series_with_only_zeros(y::Vector{Float64})
+    for element in y 
+        if !iszero(element)
+            return false
+        end
+    end
+    return true
+end
+
 function μ_σ_per_month(y::Vector{Float64}, seasonal::Int)
     μ = Vector{Float64}(undef, seasonal)
     σ = Vector{Float64}(undef, seasonal)
@@ -23,7 +32,7 @@ function normalize_series(y::Vector{Float64},
     μ, σ = μ_σ_per_month(y, seasonal)
     for i in 1:length(y_normalized)
         # We add 1e-5 to avoid dividing by 0.
-        y_normalized[i] = (y_normalized[i] - μ[mod1(i, seasonal)]) / σ[mod1(i, seasonal)] + 1e-5
+        y_normalized[i] = (y_normalized[i] - μ[mod1(i, seasonal)]) / (σ[mod1(i, seasonal)] + 1e-5)
     end
     return y_normalized, μ, σ
 end
