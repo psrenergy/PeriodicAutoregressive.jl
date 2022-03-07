@@ -22,7 +22,8 @@ function normalize_series(y::Vector{Float64},
     y_normalized = copy(y)
     μ, σ = μ_σ_per_month(y, seasonal)
     for i in 1:length(y_normalized)
-        y_normalized[i] = (y_normalized[i] - μ[mod1(i, seasonal)]) / σ[mod1(i, seasonal)]
+        # We add 1e-5 to avoid dividing by 0.
+        y_normalized[i] = (y_normalized[i] - μ[mod1(i, seasonal)]) / σ[mod1(i, seasonal)] + 1e-5
     end
     return y_normalized, μ, σ
 end
