@@ -6,7 +6,7 @@ The full methodology of PAR models can be found in this article (Maceira, Maria 
 
 To add the package you can do:
 ```julia
-pkg> add https://github.com/psrenergy/PAR.jl.git
+add https://github.com/psrenergy/PAR.jl.git
 ```
 
 and to run an example you can do:
