@@ -9,6 +9,8 @@ mutable struct AR
     p_values::Vector{Float64}
     coef_table
     ols
+    fitted_y::Vector{Float64}
+    fitted_X::Matrix{Float64}
     function AR(y::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
         return new(y,
@@ -17,10 +19,12 @@ mutable struct AR
             zero(Float64),
             zero(Float64),
             zero(Float64),
-            zeros(Float64, 2),
+            zeros(Float64, 1),
             zeros(Float64, p),
             nothing,
-            nothing
+            nothing,
+            zeros(Float64, 1),
+            zeros(Float64, 1, 1)
         )
     end
 end
@@ -101,19 +105,32 @@ end
 
 function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
     y_to_fit, X_to_fit = build_y_X(ar.y, ar.p, stage, par_seasonal)
-    ols = lm(X_to_fit, y_to_fit)
-    ar.ols = ols
-    ar.ϕ = coef(ols)
-    ar.coef_table = coeftable(ols)
-    ar.p_values = ar.coef_table.cols[ar.coef_table.pvalcol]
-    ar.resid = y_to_fit - X_to_fit * ar.ϕ
-    ar.var_resid = var(ar.resid)
-    n = length(y_to_fit) + ar.p
-    # A different but similiar form of aic can be found on Akaike original paper.
-    # A note on the difference between the general form -2L + 2k and this one 
-    # can also be found on wikipeadia talking about least squares estimators
-    ar.aic = n * log(ar.var_resid * (n - 1)) + 2 * ar.p
-    ar.aicc = ar.aic + (2 * ar.p^2 + 2 * ar.p)/(n - ar.p - 1)
+    ar.fitted_X = X_to_fit
+    ar.fitted_y = y_to_fit
+    if all(iszero, y_to_fit)
+        ar.ols = nothing
+        ar.ϕ = [1.0]
+        ar.coef_table = nothing
+        ar.p_values = zeros(1)
+        ar.resid = y_to_fit
+        ar.var_resid = 0.0
+        ar.aic = 0.0
+        ar.aicc = 0.0
+    else
+        ols = lm(X_to_fit, y_to_fit)
+        ar.ols = ols
+        ar.ϕ = coef(ols)
+        ar.coef_table = coeftable(ols)
+        ar.p_values = ar.coef_table.cols[ar.coef_table.pvalcol]
+        ar.resid = y_to_fit - X_to_fit * ar.ϕ
+        ar.var_resid = var(ar.resid)
+        n = length(y_to_fit) + ar.p
+        # A different but similiar form of aic can be found on Akaike original paper.
+        # A note on the difference between the general form -2L + 2k and this one 
+        # can also be found on wikipeadia talking about least squares estimators
+        ar.aic = n * log(ar.var_resid * (n - 1)) + 2 * ar.p
+        ar.aicc = ar.aic + (2 * ar.p^2 + 2 * ar.p)/(n - ar.p - 1)
+    end
     return ar
 end
 
@@ -167,6 +184,11 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                 scenarios[t_scen_idx, i, :] .= zero(Float64)
                 continue
             end
+            # Every observation is the same on a certain stage
+            if all(iszero, pm.best_AR_stage[current_stage_to_predict].fitted_y)
+                scenarios[t_scen_idx, i, :] .= scenarios[t_scen_idx-1, i, :]
+                continue
+            end
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
@@ -176,7 +198,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                 )
 
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
-                lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
+                lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
                                             autorregressive_normalized
                 λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
                 μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
@@ -191,7 +213,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     return scenarios[p_lim+1:end, :, :]
 end
 
-function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int, n_backw::Int; global_lower_bound::Bool = false)
+function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int, n_backw::Int; has_global_lower_bound::Bool = true)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
     n_stages = num_stages(par_models[1])
@@ -221,6 +243,11 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
                 scenarios[t_scen_idx, i, :, :] .= zero(Float64)
                 continue
             end
+            # Every observation is the same on a certain stage
+            if all(iszero, pm.best_AR_stage[current_stage_to_predict].fitted_y)
+                scenarios[t_scen_idx, i, :, :] .= scenarios[t_scen_idx-1, i, :, :]
+                continue
+            end
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
             psiser = zeros(n_scenarios)
             for s_f in 1:n_scenarios
@@ -230,7 +257,7 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
                     pm.best_AR_stage[current_stage_to_predict].ϕ
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
-                psiser[s_f] = - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
+                psiser[s_f] = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
                                 autorregressive_normalized
             end
             psimax = maximum(psiser)
@@ -241,11 +268,11 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
                     pm.best_AR_stage[current_stage_to_predict].ϕ
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
-                lower_bound_log_normal = if global_lower_bound
+                lower_bound_log_normal = if has_global_lower_bound
+                    psimax
+                else
                     - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
                       autorregressive_normalized
-                else
-                    psimax
                 end
 
                 lower_bound_log_normal = min(-0.01, lower_bound_log_normal)
