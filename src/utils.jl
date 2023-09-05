@@ -67,7 +67,7 @@ function select_best_model(candidate_models::Vector, information_criteria::Strin
         _, best_model_idx = findmin(candidate_aic)
         return candidate_models[best_model_idx]
     elseif information_criteria == "aicc"
-        candidate_aicc = map(aic, candidate_models)
+        candidate_aicc = map(aicc, candidate_models)
         _, best_model_idx = findmin(candidate_aicc)
         return candidate_models[best_model_idx]
     elseif information_criteria == "fixed_at_p_lim"
