@@ -9,6 +9,7 @@ end
 
 mutable struct ClusteringResults
     input::Array{Float64, 3}
+    historical_data::Array{Float64, 3}
     cluster_results::Vector{Vector{Int64}}
     markov_transition_matrices::Vector{Matrix{Float64}}
 end
@@ -31,15 +32,16 @@ function read_variable_to_cluster(options::ClusteringOptions)
         )
     end
 
-    input = filter_variable_to_cluster(reader, options)
+    input, historical_data = filter_variable_to_cluster(reader, options)
     variable_to_cluster = get_ena(input, reader, options)
 
-    return variable_to_cluster, input
+    return variable_to_cluster, input, historical_data
 end
 
 function filter_variable_to_cluster(reader::PSRClassesClassicInterface.GrafReader{T}, options::ClusteringOptions) where T
     # Aggregate by blocks and filter in the selected stages
     variable_to_cluster = zeros(Float64, length(options.header), options.num_stages, PSRI.max_scenarios(reader))
+    historical_data = zeros(Float64, length(options.header), 6, PSRI.max_scenarios(reader)) # PSR inflow files have six stages of historical data
 
     for stage in 1:options.num_stages
         for scenario = 1:PSRI.max_scenarios(reader)
@@ -50,17 +52,26 @@ function filter_variable_to_cluster(reader::PSRClassesClassicInterface.GrafReade
             end
         end
     end
-    return variable_to_cluster
+    for (stage_idx, stage) in enumerate(-5:0)
+        for scenario = 1:PSRI.max_scenarios(reader)
+            for block = 1:PSRI.max_blocks_stage(reader, stage)
+                PSRI.goto(reader, stage, scenario, block)
+                duration = PSRI.block_duration(options.data, stage, block) / PSRI.stage_duration(options.data, stage)
+                historical_data[:, stage_idx, scenario] .+= duration * reader.data
+            end
+        end
+    end
+    return variable_to_cluster, historical_data
 end
 
 function cluster_variable_by_scenario(options::ClusteringOptions)
-    variable_to_cluster, input = read_variable_to_cluster(options)
+    variable_to_cluster, input, historical_data = read_variable_to_cluster(options)
     cluster_results = Vector{Vector{Int64}}(undef, options.num_stages)
     for stage in axes(variable_to_cluster, 1)
         kmeans_result = kmeans(variable_to_cluster[stage:stage, :], options.num_clus; rng = MersenneTwister(1))
         cluster_results[stage] = sort_clusters(kmeans_result)
     end
-    return cluster_results, input
+    return cluster_results, input, historical_data
 end
 
 function sort_clusters(clus::KmeansResult{Array{Float64,2},Float64,Int64})
@@ -75,7 +86,7 @@ end
 
 function clustering(data::PSRClassesClassicInterface.PSRClassesData; path_case::String, file_name::String, header::Vector{String}, num_clus::Int64, num_stages::Int64)
     options = ClusteringOptions(data, path_case, file_name, header, num_clus, num_stages)
-    cluster_results, input = cluster_variable_by_scenario(options)
+    cluster_results, input, historical_data = cluster_variable_by_scenario(options)
     num_scenarios = size(input, 3)
     markov_transition_matrices = Vector{Matrix{Float64}}(undef, num_stages - 1)
     for stage in 1:num_stages - 1
@@ -85,6 +96,7 @@ function clustering(data::PSRClassesClassicInterface.PSRClassesData; path_case::
     write_transition_matrix(markov_transition_matrices, num_stages = num_stages, num_clus = num_clus, path_case = path_case)
     return ClusteringResults(
         input,
+        historical_data,
         cluster_results,
         markov_transition_matrices
     )

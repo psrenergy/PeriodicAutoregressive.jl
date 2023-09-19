@@ -50,3 +50,11 @@ function write_transition_matrix(markov_transition_matrices::Vector{Matrix{Float
     header = ["$x" for x in 1:num_clus]
     return write_graf(path_case, "transition_matrix", num_clus, 1, num_stages - 1, header, data)
 end
+
+function write_backwards(path_case::String, agents::Vector{String}, data::Array{Float64, 4})
+    # agent, stage, scen_forw, scen_back
+    num_stages = size(data, 2)
+    num_scen_forw = size(data, 3)
+    num_scen_back = size(data, 4)
+    return write_graf(path_case, "back", num_scen_back, num_scen_forw, num_stages, agents, data)
+end
