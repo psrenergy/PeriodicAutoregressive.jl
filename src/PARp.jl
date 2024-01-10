@@ -178,7 +178,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
         residuals_matrix = residuals_of_best_models_at_stage(par_models, current_stage_to_predict)
         cor_matrix = cor(residuals_matrix)
         ruido_normal = randn(n_scenarios, n_models) 
-        ruido_correlacionado = ruido_normal * cholesky(cor_matrix).L
+        ruido_correlacionado = ruido_normal * cholesky(cor_matrix).U
         for (i, pm) in enumerate(par_models)
             if pm.series_with_zeros
                 scenarios[t_scen_idx, i, :] .= zero(Float64)
