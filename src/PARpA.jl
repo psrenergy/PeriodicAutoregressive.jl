@@ -202,7 +202,7 @@ function simulate_par(par_models::Vector{PARpA}, steps_ahead::Int, n_scenarios::
         residuals_matrix = residuals_of_best_models_at_stage(par_models, current_stage_to_predict)
         cor_matrix = cor(residuals_matrix)
         ruido_normal = randn(n_scenarios, n_models) 
-        ruido_correlacionado = ruido_normal * cholesky(cor_matrix).L
+        ruido_correlacionado = ruido_normal * cholesky(cor_matrix).U
         for (i, pm) in enumerate(par_models)
             current_model_p = pm.best_AR_A_stage[current_stage_to_predict].p
             for s in 1:n_scenarios
