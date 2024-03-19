@@ -157,8 +157,8 @@ function assert_same_p_limit(par_models::Vector{PARp})
     @assert length(unique(p_limit.(par_models))) == 1
 end
 
-simulate_par(par::PARp, stepds_ahead::Int, n_scenarios::Int) = simulate_par([par], stepds_ahead, n_scenarios)
-function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int)
+simulate_par(par::PARp, stepds_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true) = simulate_par([par], stepds_ahead, n_scenarios; lognormal_noise = lognormal_noise)
+function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
     n_stages = num_stages(par_models[1])
@@ -198,12 +198,16 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                 )
 
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
-                lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
-                                            autorregressive_normalized
-                λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
-                μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
-                σ_log_normal = sqrt(log(λ))
-                ruido = exp(ruido_correlacionado[s, i]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                if lognormal_noise
+                    lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
+                                                autorregressive_normalized
+                    λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
+                    μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
+                    σ_log_normal = sqrt(log(λ))
+                    ruido = exp(ruido_correlacionado[s, i]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                else
+                    ruido = ruido_correlacionado[s, i]
+                end
                 # Evaluate the scenario value
                 scenarios_normalized[t_scen_idx, i, s] = autorregressive_normalized + ruido
                 scenarios[t_scen_idx, i, s] = scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
