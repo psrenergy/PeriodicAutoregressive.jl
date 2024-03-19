@@ -5,7 +5,23 @@ function assert_series_without_missing(y::Vector{Float64})
     return true
 end
 
+function assert_series_without_missing(y::Matrix{Float64})
+    for element in y
+        isnan(element) && return throw(AssertionError("y cannot have missing values"))
+    end
+    return true
+end
+
 function series_with_only_zeros(y::Vector{Float64})
+    for element in y 
+        if !iszero(element)
+            return false
+        end
+    end
+    return true
+end
+
+function series_with_only_zeros(y::Matrix{Float64})
     for element in y 
         if !iszero(element)
             return false
@@ -26,6 +42,18 @@ function μ_σ_per_month(y::Vector{Float64}, seasonal::Int)
     return μ, σ
 end
 
+function μ_σ_per_stage(y::Matrix{Float64}, n_stages::Int)
+    μ = Vector{Float64}(undef, n_stages)
+    σ = Vector{Float64}(undef, n_stages)
+    for i in 1:n_stages
+        stage_obs = y[i, :]
+        valid_obs = stage_obs[findall(!isnan, stage_obs)]
+        μ[i] = mean(valid_obs)
+        σ[i] = std(valid_obs)
+    end
+    return μ, σ
+end
+
 function normalize_series(y::Vector{Float64},
                           seasonal::Int)
     y_normalized = copy(y)
@@ -34,6 +62,13 @@ function normalize_series(y::Vector{Float64},
         # We add 1e-5 to avoid dividing by 0.
         y_normalized[i] = (y_normalized[i] - μ[mod1(i, seasonal)]) / (σ[mod1(i, seasonal)] + 1e-5)
     end
+    return y_normalized, μ, σ
+end
+
+function normalize_series(y::Matrix{Float64}, n_stages::Int)
+    μ, σ = μ_σ_per_stage(y, n_stages)
+    # We add 1e-5 to avoid dividing by 0.
+    y_normalized = (y .- μ) ./ (σ .+ 1e-5)
     return y_normalized, μ, σ
 end
 
