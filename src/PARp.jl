@@ -158,7 +158,7 @@ function assert_same_p_limit(par_models::Vector{PARp})
 end
 
 simulate_par(par::PARp, stepds_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true) = simulate_par([par], stepds_ahead, n_scenarios; lognormal_noise = lognormal_noise)
-function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true)
+function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true, return_noise::Bool = false)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
     n_stages = num_stages(par_models[1])
@@ -166,6 +166,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     n_models = length(par_models)
     scenarios_normalized = zeros(steps_ahead + p_lim, n_models, n_scenarios)
     scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios)
+    noise_matrix = zeros(steps_ahead, n_models, n_scenarios)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
         scenarios_normalized[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
@@ -208,13 +209,18 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                 else
                     ruido = ruido_correlacionado[s, i]
                 end
+                noise_matrix[t, i, s] = ruido
                 # Evaluate the scenario value
                 scenarios_normalized[t_scen_idx, i, s] = autorregressive_normalized + ruido
                 scenarios[t_scen_idx, i, s] = scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
             end
         end
     end
-    return scenarios[p_lim+1:end, :, :]
+    if return_noise
+        return scenarios[p_lim+1:end, :, :], noise_matrix
+    else
+        return scenarios[p_lim+1:end, :, :]
+    end
 end
 
 function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int, n_backw::Int; has_global_lower_bound::Bool = true)
