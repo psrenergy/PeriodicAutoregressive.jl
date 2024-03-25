@@ -209,7 +209,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                 else
                     ruido = ruido_correlacionado[s, i]
                 end
-                noise_matrix[t, i, s] = ruido
+                noise_matrix[t, i, s] = ruido * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
                 # Evaluate the scenario value
                 scenarios_normalized[t_scen_idx, i, s] = autorregressive_normalized + ruido
                 scenarios[t_scen_idx, i, s] = scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
