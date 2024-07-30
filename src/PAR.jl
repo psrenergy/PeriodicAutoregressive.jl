@@ -4,6 +4,7 @@ using LinearAlgebra
 using StatsBase
 using Statistics
 using GLM
+using Random
 
 import GLM.coef
 

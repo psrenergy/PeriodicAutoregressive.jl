@@ -157,8 +157,23 @@ function assert_same_p_limit(par_models::Vector{PARp})
     @assert length(unique(p_limit.(par_models))) == 1
 end
 
-simulate_par(par::PARp, stepds_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true) = simulate_par([par], stepds_ahead, n_scenarios; lognormal_noise = lognormal_noise)
-function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true, return_noise::Bool = false)
+simulate_par(
+    par::PARp,
+    stepds_ahead::Int,
+    n_scenarios::Int;
+    lognormal_noise::Bool = true,
+    return_noise::Bool = false,
+    seed::Int = 1234,
+) = simulate_par(
+    [par],
+    stepds_ahead,
+    n_scenarios;
+    lognormal_noise = lognormal_noise,
+    return_noise = return_noise,
+    seed = seed,
+)
+function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true, return_noise::Bool = false, seed::Int = 1234)
+    Random.seed!(seed)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
     n_stages = num_stages(par_models[1])
