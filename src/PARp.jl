@@ -11,7 +11,8 @@ mutable struct AR
     ols
     fitted_y::Vector{Float64}
     fitted_X::Matrix{Float64}
-    function AR(y::Vector{Float64}, p::Int)
+    weights_y::Vector{Float64}
+    function AR(y::Vector{Float64}, p::Int; weights_y = ones(length(y)))
         assert_series_without_missing(y)
         return new(y,
             p,
@@ -24,7 +25,8 @@ mutable struct AR
             nothing,
             nothing,
             zeros(Float64, 1),
-            zeros(Float64, 1, 1)
+            zeros(Float64, 1, 1),
+            weights_y
         )
     end
 end
@@ -47,8 +49,9 @@ mutable struct PARp
     information_criteria::String
     last_stage::Int
     series_with_zeros::Bool
-
-    function PARp(y::Vector{Float64}, seasonal::Int, p_lim::Int; information_criteria::String = "aic")
+    weights_y::Vector{Float64}
+    
+    function PARp(y::Vector{Float64}, seasonal::Int, p_lim::Int; information_criteria::String = "aic", weights_y = ones(length(y)))
         assert_series_without_missing(y)
         series_with_zeros = series_with_only_zeros(y)
         y_normalized, μ_stage, σ_stage = normalize_series(y, seasonal)
@@ -65,7 +68,8 @@ mutable struct PARp
                 p_lim,
                 information_criteria,
                 last_stage,
-                series_with_zeros
+                series_with_zeros,
+                weights_y
             )
     end
 end
@@ -84,7 +88,7 @@ function residuals_of_best_models_at_stage(par_models::Vector{PARp}, current_sta
     return concatenate_from_the_bottom_elements(residuals)
 end
 
-function build_y_X(y_normalized::Vector{Float64}, p::Int, stage::Int, seasonal::Int)
+function build_y_X(y_normalized::Vector{Float64}, p::Int, stage::Int, seasonal::Int; weights_y = ones(length(y)))
     n_total = length(y_normalized)
     correct_stage_idx = collect(stage:seasonal:n_total)
     y_normalized_at_correct_stage = y_normalized[correct_stage_idx]
@@ -100,14 +104,16 @@ function build_y_X(y_normalized::Vector{Float64}, p::Int, stage::Int, seasonal::
             end
         end
     end
-    return y_normalized_at_correct_stage[p+1:end], X[p+1:end, :]
+    weights_y_normalized_at_correct_stage = weights_y[correct_stage_idx]
+    weights_y_reg = weights_y_normalized_at_correct_stage[p+1:end]
+    return y_normalized_at_correct_stage[p+1:end], X[p+1:end, :], weights_y_reg
 end
 
 function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
-    y_to_fit, X_to_fit = build_y_X(ar.y, ar.p, stage, par_seasonal)
+    y_to_fit, X_to_fit, weights_y_to_fit = build_y_X(ar.y, ar.p, stage, par_seasonal)
     ar.fitted_X = X_to_fit
     ar.fitted_y = y_to_fit
-    if all(iszero, y_to_fit)
+    if all(iszero, y_to_fit; wts = weights_y_to_fit)
         ar.ols = nothing
         ar.ϕ = [1.0]
         ar.coef_table = nothing
@@ -117,7 +123,7 @@ function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
         ar.aic = 0.0
         ar.aicc = 0.0
     else
-        ols = lm(X_to_fit, y_to_fit)
+        ols = lm(X_to_fit, y_to_fit; wts = weights_y_to_fit)
         ar.ols = ols
         ar.ϕ = coef(ols)
         ar.coef_table = coeftable(ols)
@@ -139,7 +145,7 @@ function fit_par!(par::PARp)
     for stage in 1:num_stages(par)
         candiate_ar_per_stage = AR[]
         for p in 1:par.p_lim
-            candidate_ar_at_stage = AR(par.y_normalized, p)
+            candidate_ar_at_stage = AR(par.y_normalized, p; par.weights_y)
             fit_ar!(candidate_ar_at_stage; stage = stage, par_seasonal = par.seasonal)
             push!(candiate_ar_per_stage, candidate_ar_at_stage)
         end
