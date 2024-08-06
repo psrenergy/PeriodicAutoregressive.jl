@@ -11,8 +11,10 @@ mutable struct AR
     ols
     fitted_y::Vector{Float64}
     fitted_X::Matrix{Float64}
+    every_observation_is_the_same::Bool
     function AR(y::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
+        every_observation_is_the_same = series_with_all_same_observation(y)
         return new(y,
             p,
             zeros(Float64, p),
@@ -24,7 +26,8 @@ mutable struct AR
             nothing,
             nothing,
             zeros(Float64, 1),
-            zeros(Float64, 1, 1)
+            zeros(Float64, 1, 1),
+            every_observation_is_the_same
         )
     end
 end
@@ -156,6 +159,9 @@ end
 function assert_same_p_limit(par_models::Vector{PARp})
     @assert length(unique(p_limit.(par_models))) == 1
 end
+function assert_same_last_stage(par_models::Vector{PARp})
+    @assert length(unique([pm.last_stage for pm in par_models])) == 1
+end
 
 simulate_par(
     par::PARp,
@@ -176,6 +182,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     Random.seed!(seed)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
+    assert_same_last_stage(par_models)
     n_stages = num_stages(par_models[1])
     p_lim = p_limit(par_models[1])
     n_models = length(par_models)
@@ -192,17 +199,18 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
         current_stage_to_predict = mod1(par_models[1].last_stage + t, n_stages)
         t_scen_idx = t + p_lim
         residuals_matrix = residuals_of_best_models_at_stage(par_models, current_stage_to_predict)
-        cor_matrix = cor(residuals_matrix)
-        ruido_normal = randn(n_scenarios, n_models) 
+
+        # If there is a column where all residulas are 0.0 we must not take them into account for the simulation
+        clean_residuals_matrix, cols_with_all_zeros, cols_new_index_map = remove_columns_with_all_zeros(residuals_matrix)
+
+        cor_matrix = cor(clean_residuals_matrix)
+        ruido_normal = randn(n_scenarios, size(clean_residuals_matrix, 2)) 
         ruido_correlacionado = ruido_normal * cholesky(cor_matrix).U
+
         for (i, pm) in enumerate(par_models)
-            if pm.series_with_zeros
-                scenarios[t_scen_idx, i, :] .= zero(Float64)
-                continue
-            end
             # Every observation is the same on a certain stage
-            if all(iszero, pm.best_AR_stage[current_stage_to_predict].fitted_y)
-                scenarios[t_scen_idx, i, :] .= scenarios[t_scen_idx-1, i, :]
+            if i in cols_with_all_zeros
+                scenarios[t_scen_idx, i, :] .= pm.y[current_stage_to_predict]
                 continue
             end
             current_model_p = pm.best_AR_stage[current_stage_to_predict].p
@@ -220,9 +228,9 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
                     λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
                     μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
                     σ_log_normal = sqrt(log(λ))
-                    ruido = exp(ruido_correlacionado[s, i]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                    ruido = exp(ruido_correlacionado[s, cols_new_index_map[i]]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
                 else
-                    ruido = ruido_correlacionado[s, i]
+                    ruido = ruido_correlacionado[s, cols_new_index_map[i]]
                 end
                 noise_matrix[t, i, s] = ruido
                 # Evaluate the scenario value

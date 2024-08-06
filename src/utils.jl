@@ -14,6 +14,32 @@ function series_with_only_zeros(y::Vector{Float64})
     return true
 end
 
+function series_with_all_same_observation(y::Vector{Float64})
+    for i in 2:length(y)
+        if y[i] != y[1]
+            return false
+        end
+    end
+    return true
+end
+
+function remove_columns_with_all_zeros(mat::Matrix{Float64})
+    matrix_with_no_zeros = deepcopy(mat)
+    indexes_of_removed_columns = Int[]
+    indexes_of_kept_columns = Int[]
+    column_new_index_map = Int[]
+    for j in 1:size(mat, 2)
+        if all(mat[:, j] .== 0)
+            push!(indexes_of_removed_columns, j)
+            push!(column_new_index_map, -1)
+        else
+            push!(column_new_index_map, j - length(indexes_of_removed_columns))
+            push!(indexes_of_kept_columns, j)
+        end
+    end
+    return matrix_with_no_zeros[:, indexes_of_kept_columns], indexes_of_removed_columns, column_new_index_map
+end
+
 function μ_σ_per_month(y::Vector{Float64}, seasonal::Int)
     μ = Vector{Float64}(undef, seasonal)
     σ = Vector{Float64}(undef, seasonal)
