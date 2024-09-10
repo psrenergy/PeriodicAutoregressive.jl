@@ -204,7 +204,6 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
             # Every observation is the same on a certain stage
             if all(iszero, pm.best_AR_stage[current_stage_to_predict].fitted_y)
                 if t_scen_idx == 1
-                    # Ta certo isso?
                     scenarios[t_scen_idx, i, :] .= pm.y[end]
                 else
                     scenarios[t_scen_idx, i, :] .= scenarios[t_scen_idx-1, i, :]
