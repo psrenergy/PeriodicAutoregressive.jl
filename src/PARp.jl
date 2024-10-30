@@ -7,8 +7,8 @@ mutable struct AR
     var_resid::Float64
     resid::Vector{Float64}
     p_values::Vector{Float64}
-    coef_table::Any
-    ols::Any
+    coef_table::Union{Nothing, CoefTable}
+    ols::Union{Nothing, GLM.LinearModel}
     fitted_y::Vector{Float64}
     fitted_X::Matrix{Float64}
     function AR(y::Vector{Float64}, p::Int)

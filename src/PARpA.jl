@@ -9,8 +9,8 @@ mutable struct AR_A
     var_resid::Float64
     resid::Vector{Float64}
     p_values::Vector{Float64}
-    coef_table::Any
-    ols::Any
+    coef_table::Union{Nothing, CoefTable}
+    ols::Union{Nothing, GLM.LinearModel}
     function AR_A(y::Vector{Float64}, y_anual::Vector{Float64}, p::Int)
         assert_series_without_missing(y)
         return new(y,
