@@ -1,8 +1,8 @@
 function test_PARpA()
     n_stages = 12
     p_lim = 6
-    par_p_a_1 = PARpA(funil_grande, n_stages, p_lim; information_criteria = "aic");
-    par_p_a_2 = PARpA(camargos, n_stages, p_lim; information_criteria = "aic");
+    par_p_a_1 = PARpA(funil_grande, n_stages, p_lim; information_criteria = "aic")
+    par_p_a_2 = PARpA(camargos, n_stages, p_lim; information_criteria = "aic")
     fit_par!(par_p_a_1)
     fit_par!(par_p_a_2)
 
@@ -14,14 +14,14 @@ function test_PARpA()
     @test par_p_a_2.y_anual[13] ≈ 233.1666666
     @test par_p_a_2.y_anual[14] == 255.75
     @test par_p_a_2.y_anual[end] == 91.25
-    
+
     # TODO test something about the simulations
     scen = simulate_par(par_p_a_1, 10, 100)
     scen = simulate_par([par_p_a_1; par_p_a_2], 100, 1000)
 
     p_lim = 3
-    par_1_fixed_p = PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim");
-    fit_par!(par_1_fixed_p);
+    par_1_fixed_p = PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim")
+    fit_par!(par_1_fixed_p)
     @test par_1_fixed_p.best_AR_A_stage[1].p == 3
     @test par_1_fixed_p.best_AR_A_stage[2].p == 3
     @test par_1_fixed_p.best_AR_A_stage[3].p == 3
@@ -36,7 +36,7 @@ function test_PARpA()
     @test par_1_fixed_p.best_AR_A_stage[12].p == 3
 
     p_lim = 20
-    @test_throws AssertionError PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim");
+    @test_throws AssertionError PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim")
 
     return nothing
 end
