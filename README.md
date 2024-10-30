@@ -1,5 +1,7 @@
 # PeriodicAutoregressive.jl
-Repository with Periodic Autoregressive models.
+
+[![CI](https://github.com/psrenergy/PeriodicAutoregressive.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/psrenergy/PeriodicAutoregressive.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/psrenergy/PeriodicAutoregressive.jl/graph/badge.svg?token=7tA9ajgsLf)](https://codecov.io/gh/psrenergy/PeriodicAutoregressive.jl)
 
 This repository provides an implementation of **Periodic Autoregressive (PAR)** models, along with simple variations, designed for time series analysis in periodic data. PAR models are valuable tools in generating synthetic energy and flow scenarios, particularly in energy operation planning.
 
@@ -15,6 +17,7 @@ and to run an example you can do:
 
 ```julia
 using PeriodicAutoregressive
+
 funil_grande = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "funil_grande.jl"))
 batalha = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "batalha.jl"))
 
