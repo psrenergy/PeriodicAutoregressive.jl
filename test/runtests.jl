@@ -1,5 +1,5 @@
 using Test
-using PAR
+using PeriodicAutoregressive
 
 # data
 include("data/funil_grande.jl")
