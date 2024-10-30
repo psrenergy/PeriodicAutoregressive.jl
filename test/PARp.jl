@@ -1,4 +1,4 @@
-@testset "PAR(p)" begin
+function test_PARp()
     n_stages = 12
     p_lim = 6
     par_1 = PARp(funil_grande, n_stages, p_lim; information_criteria = "aic");
@@ -57,4 +57,6 @@
 
     @test isempty(findall(isnan, scen))
     @test isempty(findall(isnan, scen_b))
+
+    return nothing
 end
