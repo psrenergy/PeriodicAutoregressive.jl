@@ -1,4 +1,4 @@
-module PAR
+module PeriodicAutoregressive
 
 using LinearAlgebra
 using StatsBase
@@ -17,4 +17,4 @@ include("utils.jl")
 include("PARp.jl")
 include("PARpA.jl")
 
-end # module
+end

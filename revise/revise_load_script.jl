@@ -6,8 +6,8 @@ using Revise
 Pkg.activate(dirname(@__DIR__))
 Pkg.instantiate()
 
-using PAR
+using PeriodicAutoregressive
 @info("""
-This session is using PAR with Revise.jl.
+This session is using PeriodicAutoregressive with Revise.jl.
 For more information visit https://timholy.github.io/Revise.jl/stable/.
 """)

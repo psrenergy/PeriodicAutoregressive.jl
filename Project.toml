@@ -1,5 +1,5 @@
-name = "PAR"
-uuid = "2c8d3623-75b6-4159-a0c8-28c3dacfd198"
+name = "PeriodicAutoregressive"
+uuid = "bf9113de-13c2-4ffd-8552-7be908523e05"
 version = "0.1.0"
 
 [deps]
