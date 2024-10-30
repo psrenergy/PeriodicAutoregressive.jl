@@ -77,6 +77,7 @@ function select_best_model(candidate_models::Vector, information_criteria::Strin
         # This implementation is very naive and can be optimzed (bu not fitting all models
         # from 1 to p_lim)
         return candidate_models[end]
+    else
+        throw(ArgumentError("information_criteria must be aic, aicc or fixed_at_p_lim"))
     end
-    return error()
 end
