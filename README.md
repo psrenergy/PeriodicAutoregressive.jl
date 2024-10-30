@@ -17,7 +17,7 @@ The full methodology behind PAR models is detailed in the article by Maceira et 
 julia> ] add PeriodicAutoregressive
 ```
 
-### Example
+### Example: PAR(p) Model
 
 ```julia
 using PeriodicAutoregressive
@@ -25,15 +25,17 @@ using PeriodicAutoregressive
 funil_grande = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "funil_grande.jl"))
 batalha = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "batalha.jl"))
 
-n_stages = 12
+stages = 12
 p_lim = 6
-par_1 = PARp(funil_grande, n_stages, p_lim; information_criteria = "aic");
-par_2 = PARp(batalha, n_stages, p_lim; information_criteria = "aicc");
+
+par_1 = PARp(funil_grande, stages, p_lim; information_criteria = "aic");
+par_2 = PARp(batalha, stages, p_lim; information_criteria = "aicc");
+
 fit_par!(par_1);
 fit_par!(par_2);
 
 steps_ahead = 100
-n_scenarios = 1000
+number_of_scenarios = 1000
 
-scenarios = simulate_par([par_1; par_2], steps_ahead, n_scenarios)
+scenarios = simulate_par([par_1; par_2], steps_ahead, number_of_scenarios)
 ```
