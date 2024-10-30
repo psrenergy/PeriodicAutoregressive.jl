@@ -1,4 +1,4 @@
-@testset "PAR(p)-A" begin
+function test_PARpA()
     n_stages = 12
     p_lim = 6
     par_p_a_1 = PARpA(funil_grande, n_stages, p_lim; information_criteria = "aic");
@@ -37,4 +37,6 @@
 
     p_lim = 20
     @test_throws AssertionError PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim");
+
+    return nothing
 end
