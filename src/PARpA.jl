@@ -65,7 +65,7 @@ mutable struct PARpA
         y_normalized, μ_stage, σ_stage = normalize_series(y, seasonal)
         y_anual = get_y_anual(y)
         # normalização da média anual
-        y_anual_normalized, μ_anual, σ_anual = PAR.normalize_series(y_anual[13:end], 12)
+        y_anual_normalized, μ_anual, σ_anual = PeriodicAutoregressive.normalize_series(y_anual[13:end], 12)
         y_anual_normalized = vcat(NaN.*ones(12), y_anual_normalized)
         candidate_AR_A_stage = Vector{Vector{AR_A}}(undef, 0)
         best_AR_A_stage = Vector{AR_A}(undef, 0)
@@ -149,7 +149,7 @@ end
 function fit_par!(par::PARpA)
     # fit all AR models
     for stage in 1:num_stages(par)
-        candiate_ar_a_per_stage = PAR.AR_A[]
+        candiate_ar_a_per_stage = PeriodicAutoregressive.AR_A[]
         for p in 1:par.p_lim
             candidate_ar_a_at_stage = AR_A(par.y_normalized, par.y_anual_normalized, p)
             fit_ar!(candidate_ar_a_at_stage; stage = stage, par_seasonal = par.seasonal)
