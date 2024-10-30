@@ -14,6 +14,7 @@ and to run an example you can do:
 
 ```julia
 using PeriodicAutoregressive
+
 funil_grande = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "funil_grande.jl"))
 batalha = include(joinpath(pkgdir(PeriodicAutoregressive), "test", "data", "batalha.jl"))
 
