@@ -7,7 +7,7 @@
 
 This repository provides an implementation of **Periodic Autoregressive (PAR)** models, along with simple variations, designed for time series analysis in periodic data. PAR models are valuable tools in generating synthetic energy and flow scenarios, particularly in energy operation planning.
 
-The full methodology behind PAR models is detailed in the article by Maceira et al. (2006), _Geração de Cenários Sintéticos de Energia e Vazão para o Planejamento da Operação Energética_, published in *Cadernos do IME: Série Estatística*. Access the original article in Portuguese [here](https://www.e-publicacoes.uerj.br/index.php/cadest/article/download/15760/11931).
+The full methodology behind PAR models is detailed in the article by Maceira et al. (2006), _Geração de Cenários Sintéticos de Energia e Vazão para o Planejamento da Operação Energética_, published in *Cadernos do IME: Série Estatística*. Access the original article in Portuguese [here](https://typeset.io/pdf/geracao-de-cenarios-sinteticos-de-energia-e-vazao-para-o-34mgqextw5.pdf).
 
 ## Getting Started
 
