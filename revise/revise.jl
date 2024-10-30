@@ -8,6 +8,6 @@ Pkg.instantiate()
 
 using PeriodicAutoregressive
 @info("""
-This session is using PeriodicAutoregressive with Revise.jl.
+This session is using PeriodicAutoregressive.jl with Revise.jl.
 For more information visit https://timholy.github.io/Revise.jl/stable/.
 """)
