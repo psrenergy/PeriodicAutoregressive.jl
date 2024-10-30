@@ -7,8 +7,8 @@ mutable struct AR
     var_resid::Float64
     resid::Vector{Float64}
     p_values::Vector{Float64}
-    coef_table
-    ols
+    coef_table::Any
+    ols::Any
     fitted_y::Vector{Float64}
     fitted_X::Matrix{Float64}
     function AR(y::Vector{Float64}, p::Int)
@@ -24,7 +24,7 @@ mutable struct AR
             nothing,
             nothing,
             zeros(Float64, 1),
-            zeros(Float64, 1, 1)
+            zeros(Float64, 1, 1),
         )
     end
 end
@@ -55,18 +55,18 @@ mutable struct PARp
         candidate_AR_stage = Vector{Vector{AR}}(undef, 0)
         best_AR_stage = Vector{AR}(undef, 0)
         last_stage = mod1(length(y), seasonal)
-        return new(y, 
-                y_normalized, 
-                μ_stage, 
-                σ_stage, 
-                candidate_AR_stage,
-                best_AR_stage,
-                seasonal, 
-                p_lim,
-                information_criteria,
-                last_stage,
-                series_with_zeros
-            )
+        return new(y,
+            y_normalized,
+            μ_stage,
+            σ_stage,
+            candidate_AR_stage,
+            best_AR_stage,
+            seasonal,
+            p_lim,
+            information_criteria,
+            last_stage,
+            series_with_zeros,
+        )
     end
 end
 
@@ -129,7 +129,7 @@ function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
         # A note on the difference between the general form -2L + 2k and this one 
         # can also be found on wikipeadia talking about least squares estimators
         ar.aic = n * log(ar.var_resid * (n - 1)) + 2 * ar.p
-        ar.aicc = ar.aic + (2 * ar.p^2 + 2 * ar.p)/(n - ar.p - 1)
+        ar.aicc = ar.aic + (2 * ar.p^2 + 2 * ar.p) / (n - ar.p - 1)
     end
     return ar
 end
@@ -172,7 +172,14 @@ simulate_par(
     return_noise = return_noise,
     seed = seed,
 )
-function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::Int; lognormal_noise::Bool = true, return_noise::Bool = false, seed::Int = 1234)
+function simulate_par(
+    par_models::Vector{PARp},
+    steps_ahead::Int,
+    n_scenarios::Int;
+    lognormal_noise::Bool = true,
+    return_noise::Bool = false,
+    seed::Int = 1234,
+)
     Random.seed!(seed)
     assert_same_number_of_stages(par_models)
     assert_same_p_limit(par_models)
@@ -184,8 +191,8 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
     noise_matrix = zeros(steps_ahead, n_models, n_scenarios)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
-        scenarios[1:p_lim, i,  :] .= pm.y[end-p_lim+1:end]
+        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
+        scenarios[1:p_lim, i, :] .= pm.y[end-p_lim+1:end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -193,7 +200,7 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
         t_scen_idx = t + p_lim
         residuals_matrix = residuals_of_best_models_at_stage(par_models, current_stage_to_predict)
         cor_matrix = cor(residuals_matrix)
-        ruido_normal = randn(n_scenarios, n_models) 
+        ruido_normal = randn(n_scenarios, n_models)
         # ruido_correlacionado = ruido_normal * cholesky(cor_matrix).U
         ruido_correlacionado = ruido_normal
         for (i, pm) in enumerate(par_models)
@@ -210,25 +217,27 @@ function simulate_par(par_models::Vector{PARp}, steps_ahead::Int, n_scenarios::I
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-1 : -1 : t_scen_idx-current_model_p, i, s],
-                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s],
+                    pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
 
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
                 if lognormal_noise
-                    lower_bound_log_normal = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
-                                                autorregressive_normalized
-                    λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
-                    μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
+                    lower_bound_log_normal =
+                        -(pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) -
+                        autorregressive_normalized
+                    λ = (pm.best_AR_stage[current_stage_to_predict].var_resid / lower_bound_log_normal^2) + 1
+                    μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid / (λ * (λ - 1)))
                     σ_log_normal = sqrt(log(λ))
-                    ruido = exp(ruido_correlacionado[s, i]*σ_log_normal + μ_log_normal) + lower_bound_log_normal
+                    ruido = exp(ruido_correlacionado[s, i] * σ_log_normal + μ_log_normal) + lower_bound_log_normal
                 else
                     ruido = ruido_correlacionado[s, i]
                 end
                 noise_matrix[t, i, s] = ruido
                 # Evaluate the scenario value
                 scenarios_normalized[t_scen_idx, i, s] = autorregressive_normalized + ruido
-                scenarios[t_scen_idx, i, s] = scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
+                scenarios[t_scen_idx, i, s] =
+                    scenarios_normalized[t_scen_idx, i, s] * pm.σ_stage[current_stage_to_predict] + pm.μ_stage[current_stage_to_predict]
             end
         end
     end
@@ -251,8 +260,8 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
     scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios, n_backw)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:p_lim, i,  :] .= pm.y_normalized[end-p_lim+1:end]
-        scenarios[1:p_lim, i,  :, :] .= pm.y[end-p_lim+1:end]
+        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
+        scenarios[1:p_lim, i, :, :] .= pm.y[end-p_lim+1:end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -280,32 +289,32 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
                     scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
-                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                    pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
-                psiser[s_f] = - (pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) - 
-                                autorregressive_normalized
+                psiser[s_f] = -(pm.μ_stage[current_stage_to_predict] / (pm.σ_stage[current_stage_to_predict] + 1e-5)) -
+                              autorregressive_normalized
             end
             psimax = maximum(psiser)
             for s_f in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
                     scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
-                    pm.best_AR_stage[current_stage_to_predict].ϕ
+                    pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
                 lower_bound_log_normal = if has_global_lower_bound
                     psimax
                 else
-                    - (pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) - 
-                      autorregressive_normalized
+                    -(pm.μ_stage[current_stage_to_predict] / pm.σ_stage[current_stage_to_predict]) -
+                    autorregressive_normalized
                 end
 
                 lower_bound_log_normal = min(-0.01, lower_bound_log_normal)
 
-                λ = (pm.best_AR_stage[current_stage_to_predict].var_resid/lower_bound_log_normal^2) + 1
+                λ = (pm.best_AR_stage[current_stage_to_predict].var_resid / lower_bound_log_normal^2) + 1
                 σ_log_normal = sqrt(log(λ))
-                μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid/ (λ * (λ - 1)))
+                μ_log_normal = 0.5 * log(pm.best_AR_stage[current_stage_to_predict].var_resid / (λ * (λ - 1)))
                 ruido = exp(ruido_correlacionado[noise_index_sf[s_f], i] * σ_log_normal + μ_log_normal) + lower_bound_log_normal
                 # Evaluate the scenario value
                 scenarios_normalized[t_scen_idx, i, s_f] = autorregressive_normalized + ruido
@@ -320,7 +329,7 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
                     scenarios_normalized_back = autorregressive_normalized + ruido
                     scenarios[t_scen_idx, i, s_f, s_b] =
                         scenarios_normalized_back * pm.σ_stage[current_stage_to_predict] +
-                            pm.μ_stage[current_stage_to_predict]
+                        pm.μ_stage[current_stage_to_predict]
                     if scenarios[t_scen_idx, i, s_f, s_b] <= 0
                         scenarios[t_scen_idx, i, s_f, s_b] =
                             pm.σ_stage[current_stage_to_predict] * (0.04 + 0.01 * rand())
@@ -329,5 +338,5 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
             end
         end
     end
-    return scenarios[p_lim+1:end, :, :, :], scenarios[1:p_lim, :,  1, 1]
+    return scenarios[p_lim+1:end, :, :, :], scenarios[1:p_lim, :, 1, 1]
 end
