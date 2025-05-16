@@ -3,6 +3,10 @@ module TestPARp
 using PeriodicAutoregressive
 using Test
 
+include("data/funil_grande.jl")
+include("data/batalha.jl")
+include("data/inflow_with_stages_0_variance.jl")
+
 function test_PARp()
     n_stages = 12
     p_lim = 6

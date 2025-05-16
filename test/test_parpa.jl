@@ -3,6 +3,9 @@ module TestPARpA
 using PeriodicAutoregressive
 using Test
 
+include("data/funil_grande.jl")
+include("data/camargos.jl")
+
 function test_PARpA()
     n_stages = 12
     p_lim = 6
