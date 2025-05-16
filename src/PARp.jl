@@ -100,7 +100,7 @@ function build_y_X(y_normalized::Vector{Float64}, p::Int, stage::Int, seasonal::
             end
         end
     end
-    return y_normalized_at_correct_stage[p+1:end], X[p+1:end, :]
+    return y_normalized_at_correct_stage[(p+1):end], X[(p+1):end, :]
 end
 
 function fit_ar!(ar::AR; stage::Int = 1, par_seasonal::Int = 1)
@@ -191,8 +191,8 @@ function simulate_par(
     noise_matrix = zeros(steps_ahead, n_models, n_scenarios)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
-        scenarios[1:p_lim, i, :] .= pm.y[end-p_lim+1:end]
+        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[(end-p_lim+1):end]
+        scenarios[1:p_lim, i, :] .= pm.y[(end-p_lim+1):end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -217,7 +217,7 @@ function simulate_par(
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s],
+                    scenarios_normalized[(t_scen_idx-1):-1:(t_scen_idx-current_model_p), i, s],
                     pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
 
@@ -242,9 +242,9 @@ function simulate_par(
         end
     end
     if return_noise
-        return scenarios[p_lim+1:end, :, :], noise_matrix
+        return scenarios[(p_lim+1):end, :, :], noise_matrix
     else
-        return scenarios[p_lim+1:end, :, :]
+        return scenarios[(p_lim+1):end, :, :]
     end
 end
 
@@ -260,8 +260,8 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
     scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios, n_backw)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
-        scenarios[1:p_lim, i, :, :] .= pm.y[end-p_lim+1:end]
+        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[(end-p_lim+1):end]
+        scenarios[1:p_lim, i, :, :] .= pm.y[(end-p_lim+1):end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -288,7 +288,7 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
             for s_f in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
+                    scenarios_normalized[(t_scen_idx-1):-1:(t_scen_idx-current_model_p), i, s_f],
                     pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
@@ -299,7 +299,7 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
             for s_f in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s_f],
+                    scenarios_normalized[(t_scen_idx-1):-1:(t_scen_idx-current_model_p), i, s_f],
                     pm.best_AR_stage[current_stage_to_predict].ϕ,
                 )
                 # Calculate the noise and the parameters of the viable 3 parameter log normal
@@ -338,5 +338,5 @@ function simulate_par_f_b(par_models::Vector{PARp}, steps_ahead::Int, n_scenario
             end
         end
     end
-    return scenarios[p_lim+1:end, :, :, :], scenarios[1:p_lim, :, 1, 1]
+    return scenarios[(p_lim+1):end, :, :, :], scenarios[1:p_lim, :, 1, 1]
 end

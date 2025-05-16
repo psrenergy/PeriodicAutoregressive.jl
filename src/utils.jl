@@ -51,7 +51,7 @@ function concatenate_from_the_bottom_elements(vov::Vector{Vector{T}}) where {T}
     min_length = minimum(length.(vov))
     mat = zeros(min_length, n_series)
     for col in 1:n_series
-        mat[:, col] = vov[col][end-min_length+1:end]
+        mat[:, col] = vov[col][(end-min_length+1):end]
     end
     return mat
 end

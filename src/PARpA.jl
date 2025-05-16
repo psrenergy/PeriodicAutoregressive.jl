@@ -38,7 +38,7 @@ residuals_variance(ar_a::AR_A) = ar_a.var_resid
 function get_y_anual(y::Vector{Float64})
     y_anual = zeros(length(y))
     for i in 13:length(y)
-        y_anual[i] = mean(y[i-12:i-1])
+        y_anual[i] = mean(y[(i-12):(i-1)])
     end
     return y_anual
 end
@@ -121,8 +121,8 @@ function build_y_X(y_normalized::Vector{Float64}, y_anual_normalized::Vector{Flo
             end
         end
     end
-    X_reg = hcat(X[p+1:end, :], y_anual_normalized_at_correct_stage[p+1:end])
-    y_reg = y_normalized_at_correct_stage[p+1:end]
+    X_reg = hcat(X[(p+1):end, :], y_anual_normalized_at_correct_stage[(p+1):end])
+    y_reg = y_normalized_at_correct_stage[(p+1):end]
     return y_reg, X_reg
 end
 
@@ -133,7 +133,7 @@ function fit_ar!(ar_A::AR_A; stage::Int = 1, par_seasonal::Int = 12)
     params = coef(ols)
     ar_A.coef_table = coeftable(ols)
     ar_A.p_values = ar_A.coef_table.cols[ar_A.coef_table.pvalcol]
-    ar_A.ϕ = params[1:end-1]
+    ar_A.ϕ = params[1:(end-1)]
     ar_A.ϕ_A = params[end]
     ar_A.resid = y_to_fit - X_to_fit * params
     ar_A.var_resid = var(ar_A.resid)
@@ -192,8 +192,8 @@ function simulate_par(par_models::Vector{PARpA}, steps_ahead::Int, n_scenarios::
     scenarios = zeros(steps_ahead + n_stages, n_models, n_scenarios)
     # Fill the first part of scenarios with historical data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:n_stages, i, :] .= pm.y_normalized[end-n_stages+1:end]
-        scenarios[1:n_stages, i, :] .= pm.y[end-n_stages+1:end]
+        scenarios_normalized[1:n_stages, i, :] .= pm.y_normalized[(end-n_stages+1):end]
+        scenarios[1:n_stages, i, :] .= pm.y[(end-n_stages+1):end]
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
@@ -208,10 +208,10 @@ function simulate_par(par_models::Vector{PARpA}, steps_ahead::Int, n_scenarios::
             for s in 1:n_scenarios
                 # Evaluate the deterministic parts of the scenarios
                 autorregressive_normalized = dot(
-                    scenarios_normalized[t_scen_idx-1:-1:t_scen_idx-current_model_p, i, s],
+                    scenarios_normalized[(t_scen_idx-1):-1:(t_scen_idx-current_model_p), i, s],
                     pm.best_AR_A_stage[current_stage_to_predict].ϕ,
                 )
-                mean_last_12_ena = mean(scenarios[t_scen_idx-n_stages:t_scen_idx-1, i, s])
+                mean_last_12_ena = mean(scenarios[(t_scen_idx-n_stages):(t_scen_idx-1), i, s])
                 anual_normalized =
                     pm.best_AR_A_stage[current_stage_to_predict].ϕ_A *
                     (mean_last_12_ena - pm.μ_anual[mod1(current_stage_to_predict - 1, n_stages)]) /
@@ -232,5 +232,5 @@ function simulate_par(par_models::Vector{PARpA}, steps_ahead::Int, n_scenarios::
             end
         end
     end
-    return scenarios[n_stages+1:end, :, :]
+    return scenarios[(n_stages+1):end, :, :]
 end
