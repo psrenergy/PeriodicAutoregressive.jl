@@ -1,3 +1,8 @@
+module TestPARpA
+
+using PeriodicAutoregressive
+using Test
+
 function test_PARpA()
     n_stages = 12
     p_lim = 6
@@ -39,4 +44,20 @@ function test_PARpA()
     @test_throws AssertionError PARpA(funil_grande, n_stages, p_lim; information_criteria = "fixed_at_p_lim")
 
     return nothing
+end
+
+function runtests()
+    Base.GC.gc()
+    Base.GC.gc()
+    for name in names(@__MODULE__; all = true)
+        if startswith("$name", "test_")
+            @testset "$(name)" begin
+                getfield(@__MODULE__, name)()
+            end
+        end
+    end
+end
+
+TestPARpA.runtests()
+
 end

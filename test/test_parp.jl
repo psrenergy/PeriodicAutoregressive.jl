@@ -1,3 +1,8 @@
+module TestPARp
+
+using PeriodicAutoregressive
+using Test
+
 function test_PARp()
     n_stages = 12
     p_lim = 6
@@ -59,4 +64,20 @@ function test_PARp()
     @test isempty(findall(isnan, scen_b))
 
     return nothing
+end
+
+function runtests()
+    Base.GC.gc()
+    Base.GC.gc()
+    for name in names(@__MODULE__; all = true)
+        if startswith("$name", "test_")
+            @testset "$(name)" begin
+                getfield(@__MODULE__, name)()
+            end
+        end
+    end
+end
+
+TestPARp.runtests()
+
 end
