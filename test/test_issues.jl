@@ -3,7 +3,7 @@ module TestIssues
 using PeriodicAutoregressive
 using Test
 
-function test_issue_40()
+function test_issue_29()
     #! format: off
     incremental_inflow = [
         30.00, 35.01, 27.65, 30.61, 29.67, 41.31, 28.91, 42.87, 37.15, 33.72, 36.48, 31.32,
@@ -49,15 +49,8 @@ function test_issue_40()
     ]
     #! format: on
 
-    number_of_stages_in_year = 12
     P = 0
-
-    parp_models = PARp(
-        incremental_inflow,
-        number_of_stages_in_year,
-        P,
-    )
-
+    parp_models = PARp(incremental_inflow, 12, P)
     fit_par!(parp_models)
 
     return nothing
