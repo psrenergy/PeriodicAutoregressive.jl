@@ -1,6 +1,6 @@
 name = "PeriodicAutoregressive"
 uuid = "bf9113de-13c2-4ffd-8552-7be908523e05"
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
@@ -12,11 +12,11 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [compat]
 Aqua = "0.7, 0.8"
 GLM = "1.5 - 1.9"
-LinearAlgebra = "1.6 - 1.11"
-Random = "1.6 - 1.11"
-Statistics = "1.6 - 1.11"
+LinearAlgebra = "1"
+Random = "1"
+Statistics = "1"
 StatsBase = "0.33 - 0.34"
-Test = "1.6 - 1.11"
+Test = "1"
 julia = "1.6"
 
 [extras]
