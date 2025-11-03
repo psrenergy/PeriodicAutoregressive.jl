@@ -67,6 +67,31 @@ function test_PARp()
     @test isempty(findall(isnan, scen))
     @test isempty(findall(isnan, scen_b))
 
+    # Test custom initial conditions
+    # Fit model with funil_grande data
+    par_5 = PARp(funil_grande, n_stages, p_lim; information_criteria = "aic")
+    fit_par!(par_5)
+
+    # Simulate using batalha data as initial conditions
+    initial_cond = batalha[end-p_lim+1:end]
+    scen_custom = simulate_par(par_5, 10, 100; initial_conditions = initial_cond)
+
+    # Check that scenarios have the correct shape
+    @test size(scen_custom) == (10, 1, 100)
+
+    # Check that the first generated values are different from default simulation
+    scen_default = simulate_par(par_5, 10, 100; seed = 1234)
+    # The scenarios should be different because initial conditions are different
+    @test scen_custom != scen_default
+
+    # Test with multiple models
+    par_6 = PARp(batalha, n_stages, p_lim; information_criteria = "aic")
+    fit_par!(par_6)
+    scen_multi = simulate_par([par_5; par_6], 10, 100;
+                               initial_conditions = [funil_grande[end-p_lim+1:end], batalha[end-20:end-10]])
+
+    @test size(scen_multi) == (10, 2, 100)
+
     return nothing
 end
 

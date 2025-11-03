@@ -164,6 +164,7 @@ simulate_par(
     lognormal_noise::Bool = true,
     return_noise::Bool = false,
     seed::Int = 1234,
+    initial_conditions::Union{Nothing, Vector{Float64}} = nothing,
 ) = simulate_par(
     [par],
     stepds_ahead,
@@ -171,6 +172,7 @@ simulate_par(
     lognormal_noise = lognormal_noise,
     return_noise = return_noise,
     seed = seed,
+    initial_conditions = isnothing(initial_conditions) ? nothing : [initial_conditions],
 )
 function simulate_par(
     par_models::Vector{PARp},
@@ -179,6 +181,7 @@ function simulate_par(
     lognormal_noise::Bool = true,
     return_noise::Bool = false,
     seed::Int = 1234,
+    initial_conditions::Union{Nothing, Vector{Vector{Float64}}} = nothing,
 )
     Random.seed!(seed)
     assert_same_number_of_stages(par_models)
@@ -189,10 +192,33 @@ function simulate_par(
     scenarios_normalized = zeros(steps_ahead + p_lim, n_models, n_scenarios)
     scenarios = zeros(steps_ahead + p_lim, n_models, n_scenarios)
     noise_matrix = zeros(steps_ahead, n_models, n_scenarios)
-    # Fill the first part of scenarios with historical data
+
+    # Validate initial conditions if provided
+    if !isnothing(initial_conditions)
+        @assert length(initial_conditions) == n_models "Number of initial condition vectors must match number of models"
+        for (i, init_cond) in enumerate(initial_conditions)
+            @assert length(init_cond) >= p_lim "Initial conditions for model $i must have at least $p_lim observations, got $(length(init_cond))"
+        end
+    end
+
+    # Fill the first part of scenarios with initial data
     for (i, pm) in enumerate(par_models)
-        scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
-        scenarios[1:p_lim, i, :] .= pm.y[end-p_lim+1:end]
+        if isnothing(initial_conditions)
+            # Use historical data from the fitted model
+            scenarios_normalized[1:p_lim, i, :] .= pm.y_normalized[end-p_lim+1:end]
+            scenarios[1:p_lim, i, :] .= pm.y[end-p_lim+1:end]
+        else
+            # Use provided initial conditions
+            init_data = initial_conditions[i][end-p_lim+1:end]
+            scenarios[1:p_lim, i, :] .= init_data
+
+            # Normalize the initial conditions using the model's stage-specific normalization
+            # We need to determine which stage each initial value belongs to
+            for j in 1:p_lim
+                stage_idx = mod1(pm.last_stage - p_lim + j, n_stages)
+                scenarios_normalized[j, i, :] .= (init_data[j] - pm.μ_stage[stage_idx]) / pm.σ_stage[stage_idx]
+            end
+        end
     end
     # Simulate on the standardized series
     for t in 1:steps_ahead
