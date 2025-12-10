@@ -6,7 +6,7 @@ function assert_series_without_missing(y::Vector{Float64})
 end
 
 function series_with_only_zeros(y::Vector{Float64})
-    for element in y 
+    for element in y
         if !iszero(element)
             return false
         end
@@ -27,7 +27,7 @@ function μ_σ_per_month(y::Vector{Float64}, seasonal::Int)
 end
 
 function normalize_series(y::Vector{Float64},
-                          seasonal::Int)
+    seasonal::Int)
     y_normalized = copy(y)
     μ, σ = μ_σ_per_month(y, seasonal)
     for i in 1:length(y_normalized)
@@ -46,7 +46,7 @@ i.e.
 
 a vector [1,2,3,4] and a vector [1, 2] should become the matrix [3 1; 4 2]
 """
-function concatenate_from_the_bottom_elements(vov::Vector{Vector{T}}) where T
+function concatenate_from_the_bottom_elements(vov::Vector{Vector{T}}) where {T}
     n_series = length(vov)
     min_length = minimum(length.(vov))
     mat = zeros(min_length, n_series)
@@ -77,6 +77,7 @@ function select_best_model(candidate_models::Vector, information_criteria::Strin
         # This implementation is very naive and can be optimzed (bu not fitting all models
         # from 1 to p_lim)
         return candidate_models[end]
+    else
+        throw(ArgumentError("information_criteria must be aic, aicc or fixed_at_p_lim"))
     end
-    return error()
 end
